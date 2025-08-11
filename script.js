@@ -265,11 +265,10 @@ function initSocket() {
     return;
   }
 
-  SERVER_URL = SERVER_URL || 'https://ticky-tacky.onrender.com'; // ensure SERVER_URL is set
   try {
     console.log('Creating new socket connection...');
 
-    const socket = io(SERVER_URL, {
+    socket = io(SERVER_URL, {
       transports: ['websocket'], // force websocket transport (optional but recommended)
       withCredentials: true
     });
