@@ -38,7 +38,7 @@ const io = new Server(server, {
   }
 });
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 10000; // fallback for local dev
 
 /*
 Room matchmaking model:
