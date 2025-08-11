@@ -263,7 +263,7 @@ function initSocket() {
     return;
   }
 
-  const SERVER_URL = "https://ticky-tacky.onrender.com";
+  const SERVER_URL = "https://ticky-tacky.onrender.com/";
   try {
     console.log('Creating new socket connection...');
 
