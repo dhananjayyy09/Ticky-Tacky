@@ -28,7 +28,14 @@ app.get('/script.js', (req, res) => {
 
 const server = http.createServer(app);
 const io = new Server(server, {
-  cors: { origin: "*", methods: ["GET","POST"] }
+  cors: {
+    origin: [
+      "https://your-vercel-domain.vercel.app",
+      "http://localhost:3000" // keep for local dev
+    ],
+    methods: ["GET", "POST"],
+    credentials: true
+  }
 });
 
 const PORT = process.env.PORT || 3000;
@@ -44,25 +51,28 @@ Room matchmaking model:
 const rooms = {}; // { roomId: { players: { socketId: {name, symbol}}, board: Array(9), turn, ready: Set, status } }
 
 function createRoomId() {
-  return Math.random().toString(36).slice(2,9);
+  return Math.random().toString(36).slice(2, 9);
 }
 
 io.on('connection', socket => {
   console.log(`sock connected ${socket.id}`);
-
+  socket.on("pingServer", () => {
+    // Optional: log or just ignore
+    console.log(`Ping received from ${socket.id}`);
+  });
   // helper
   function safeEmit(ev, payload) {
-    try { socket.emit(ev, payload); } catch(e) {}
+    try { socket.emit(ev, payload); } catch (e) { }
   }
 
   // find or create room and join
   socket.on('quickplay', ({ name }) => {
     // look for a room with one slot
     let target = null;
-    for(const [rid, room] of Object.entries(rooms)) {
-      if(Object.keys(room.players).length === 1 && room.status === 'waiting') { target = rid; break; }
+    for (const [rid, room] of Object.entries(rooms)) {
+      if (Object.keys(room.players).length === 1 && room.status === 'waiting') { target = rid; break; }
     }
-    if(!target) target = createRoomId();
+    if (!target) target = createRoomId();
     joinRoom(target, socket, name);
   });
 
@@ -73,11 +83,11 @@ io.on('connection', socket => {
   });
 
   socket.on('joinRoom', ({ roomId, name }) => {
-    if(!rooms[roomId]) {
+    if (!rooms[roomId]) {
       safeEmit('errorMsg', { error: 'Room not found' });
       return;
     }
-    if(Object.keys(rooms[roomId].players).length >= 2) {
+    if (Object.keys(rooms[roomId].players).length >= 2) {
       safeEmit('errorMsg', { error: 'Room full' });
       return;
     }
@@ -85,7 +95,7 @@ io.on('connection', socket => {
   });
 
   function joinRoom(roomId, socket, name) {
-    if(!rooms[roomId]) {
+    if (!rooms[roomId]) {
       rooms[roomId] = {
         players: {},
         board: Array(9).fill(null),
@@ -96,35 +106,35 @@ io.on('connection', socket => {
       };
     }
     const room = rooms[roomId];
-    
+
     // Check if room is full
-    if(Object.keys(room.players).length >= 2) {
+    if (Object.keys(room.players).length >= 2) {
       safeEmit('errorMsg', { error: 'Room is full' });
       return;
     }
-    
+
     // assign symbol
     const used = Object.values(room.players).map(p => p.symbol);
     const symbol = used.includes('X') ? 'O' : 'X';
-    
+
     // Add player to room
-    room.players[socket.id] = { 
-      name: name || (symbol === 'X' ? 'Player X' : 'Player O'), 
-      symbol, 
-      socketId: socket.id 
+    room.players[socket.id] = {
+      name: name || (symbol === 'X' ? 'Player X' : 'Player O'),
+      symbol,
+      socketId: socket.id
     };
-    
+
     // Reset ready state for this player
     room.ready.delete(socket.id);
-    
+
     socket.join(roomId);
-    
+
     // notify participants
     io.to(roomId).emit('roomUpdate', getRoomPublic(roomId));
     console.log(`socket ${socket.id} joined ${roomId} as ${symbol}`);
-    
+
     // start match if two players
-    if(Object.keys(room.players).length === 2) {
+    if (Object.keys(room.players).length === 2) {
       room.status = 'waitingReady';
       room.board = Array(9).fill(null);
       room.turn = 'X';
@@ -135,27 +145,27 @@ io.on('connection', socket => {
 
   socket.on('setReady', ({ roomId, ready }) => {
     const room = rooms[roomId];
-    if(!room) {
+    if (!room) {
       safeEmit('errorMsg', { error: 'Room not found' });
       return;
     }
-    
-    if(!room.players[socket.id]) {
+
+    if (!room.players[socket.id]) {
       safeEmit('errorMsg', { error: 'You are not in this room' });
       return;
     }
-    
-    if(ready) {
+
+    if (ready) {
       room.ready.add(socket.id);
     } else {
       room.ready.delete(socket.id);
     }
-    
+
     // Update room status for all players
     io.to(roomId).emit('roomUpdate', getRoomPublic(roomId));
-    
+
     // Check if both players are ready
-    if(room.ready.size === 2) {
+    if (room.ready.size === 2) {
       room.status = 'playing';
       room.board = Array(9).fill(null);
       room.turn = 'X';
@@ -166,64 +176,64 @@ io.on('connection', socket => {
 
   socket.on('playMove', ({ roomId, index }) => {
     const room = rooms[roomId];
-    if(!room) {
+    if (!room) {
       safeEmit('errorMsg', { error: 'Room not found' });
       return;
     }
-    
-    if(room.status !== 'playing') {
+
+    if (room.status !== 'playing') {
       safeEmit('invalidMove', { reason: 'Game is not in progress' });
       return;
     }
-    
+
     const player = room.players[socket.id];
-    if(!player) {
+    if (!player) {
       safeEmit('errorMsg', { error: 'You are not in this room' });
       return;
     }
-    
+
     // validate turn
-    if(player.symbol !== room.turn) {
+    if (player.symbol !== room.turn) {
       safeEmit('invalidMove', { reason: 'Not your turn' });
       return;
     }
-    
+
     // validate index
-    if(index < 0 || index > 8 || room.board[index]) {
+    if (index < 0 || index > 8 || room.board[index]) {
       safeEmit('invalidMove', { reason: 'Invalid cell' });
       return;
     }
-    
+
     // Make the move
     room.board[index] = player.symbol;
     console.log(`Player ${player.symbol} played at position ${index} in room ${roomId}`);
-    
+
     // check win/draw
     const win = checkWin(room.board);
-    if(win) {
+    if (win) {
       room.status = 'finished';
-      io.to(roomId).emit('gameOver', { 
-        result: 'win', 
-        winner: win.player, 
-        combo: win.combo, 
-        room: getRoomPublic(roomId) 
+      io.to(roomId).emit('gameOver', {
+        result: 'win',
+        winner: win.player,
+        combo: win.combo,
+        room: getRoomPublic(roomId)
       });
       console.log(`Game over in room ${roomId}: ${win.player} wins`);
       return;
-    } else if(room.board.every(Boolean)) {
+    } else if (room.board.every(Boolean)) {
       room.status = 'finished';
-      io.to(roomId).emit('gameOver', { 
-        result: 'draw', 
-        room: getRoomPublic(roomId) 
+      io.to(roomId).emit('gameOver', {
+        result: 'draw',
+        room: getRoomPublic(roomId)
       });
       console.log(`Game over in room ${roomId}: Draw`);
       return;
     } else {
       // next turn
       room.turn = (room.turn === 'X') ? 'O' : 'X';
-      io.to(roomId).emit('boardUpdate', { 
-        board: room.board.slice(), 
-        turn: room.turn 
+      io.to(roomId).emit('boardUpdate', {
+        board: room.board.slice(),
+        turn: room.turn
       });
       console.log(`Turn changed to ${room.turn} in room ${roomId}`);
     }
@@ -231,25 +241,25 @@ io.on('connection', socket => {
 
   socket.on('rematch', ({ roomId }) => {
     const room = rooms[roomId];
-    if(!room) {
+    if (!room) {
       safeEmit('errorMsg', { error: 'Room not found' });
       return;
     }
-    
-    if(!room.players[socket.id]) {
+
+    if (!room.players[socket.id]) {
       safeEmit('errorMsg', { error: 'You are not in this room' });
       return;
     }
-    
-    if(room.status !== 'finished') {
+
+    if (room.status !== 'finished') {
       safeEmit('errorMsg', { error: 'Game is not finished yet' });
       return;
     }
-    
+
     room.rematchVotes.add(socket.id);
     io.to(roomId).emit('rematchUpdate', { votes: room.rematchVotes.size });
-    
-    if(room.rematchVotes.size === 2) {
+
+    if (room.rematchVotes.size === 2) {
       // Reset game for rematch
       room.board = Array(9).fill(null);
       room.turn = 'X';
@@ -268,33 +278,33 @@ io.on('connection', socket => {
   socket.on('disconnect', () => {
     console.log('disconnect', socket.id);
     // remove from any room
-    for(const rid of Object.keys(rooms)) {
-      if(rooms[rid].players[socket.id]) {
+    for (const rid of Object.keys(rooms)) {
+      if (rooms[rid].players[socket.id]) {
         // notify other player
         const other = Object.keys(rooms[rid].players).find(id => id !== socket.id);
         leaveRoom(rid, socket, true);
-        if(other) {
+        if (other) {
           io.to(other).emit('opponentLeft', { message: 'Opponent disconnected' });
         }
       }
     }
   });
 
-  function leaveRoom(roomId, socket, silent=false) {
+  function leaveRoom(roomId, socket, silent = false) {
     const room = rooms[roomId];
-    if(!room) return;
-    
+    if (!room) return;
+
     const player = room.players[socket.id];
-    if(player) {
+    if (player) {
       console.log(`Player ${player.name} (${player.symbol}) left room ${roomId}`);
     }
-    
+
     delete room.players[socket.id];
     room.ready.delete(socket.id);
     room.rematchVotes.delete(socket.id);
     socket.leave(roomId);
-    
-    if(Object.keys(room.players).length === 0) {
+
+    if (Object.keys(room.players).length === 0) {
       // Room is empty, delete it
       delete rooms[roomId];
       console.log(`Room ${roomId} deleted (empty)`);
@@ -305,8 +315,8 @@ io.on('connection', socket => {
       room.turn = 'X';
       room.ready.clear();
       room.rematchVotes.clear();
-      
-      if(!silent) {
+
+      if (!silent) {
         io.to(roomId).emit('roomUpdate', getRoomPublic(roomId));
         io.to(roomId).emit('opponentLeft', { message: 'Opponent left the room' });
       }
@@ -316,15 +326,15 @@ io.on('connection', socket => {
 
   function getRoomPublic(roomId) {
     const r = rooms[roomId];
-    if(!r) return null;
-    
-    const players = Object.values(r.players).map(p => ({ 
-      name: p.name, 
-      symbol: p.symbol, 
+    if (!r) return null;
+
+    const players = Object.values(r.players).map(p => ({
+      name: p.name,
+      symbol: p.symbol,
       socketId: p.socketId,
       isReady: r.ready.has(p.socketId)
     }));
-    
+
     return {
       roomId,
       players,
@@ -341,13 +351,13 @@ io.on('connection', socket => {
 
   function checkWin(b) {
     const combos = [
-      [0,1,2],[3,4,5],[6,7,8],
-      [0,3,6],[1,4,7],[2,5,8],
-      [0,4,8],[2,4,6]
+      [0, 1, 2], [3, 4, 5], [6, 7, 8],
+      [0, 3, 6], [1, 4, 7], [2, 5, 8],
+      [0, 4, 8], [2, 4, 6]
     ];
-    for(const combo of combos) {
-      const [a,b1,c] = combo;
-      if(b[a] && b[a] === b[b1] && b[a] === b[c]) return { player: b[a], combo };
+    for (const combo of combos) {
+      const [a, b1, c] = combo;
+      if (b[a] && b[a] === b[b1] && b[a] === b[c]) return { player: b[a], combo };
     }
     return null;
   }

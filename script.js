@@ -268,16 +268,18 @@ function initSocket() {
     console.log('Creating new socket connection...');
 
     socket = io(SERVER_URL, {
-      transports: ['websocket', 'polling'],
-      timeout: 10000,
-      forceNew: true
+      transports: ["websocket"],
+      reconnection: true,
+      reconnectionAttempts: 5,
+      timeout: 10000
     });
+
 
     connStatus.innerHTML = 'Server: <span style="color:#60a5fa">connecting...</span>';
 
-    socket.on('connect', () => {
-      connStatus.innerHTML = 'Server: <span style="color:#22c55e">connected</span>';
-      updateMessage('Connected. Use Quick Play or Create/Join a room.');
+    socket.on("connect", () => {
+      console.log("Connected to server");
+      setInterval(() => socket.emit("pingServer"), 25000); // send ping every 25s
     });
 
     socket.on('disconnect', () => {
