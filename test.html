@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tic Tac Toe Game</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background: #1a1a1a;
+            color: white;
+        }
+        
+        .game-container {
+            text-align: center;
+        }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            width: 300px;
+            height: 300px;
+            margin: 20px auto;
+            position: relative;
+            background: #2a2a2a;
+            padding: 20px;
+            border-radius: 12px;
+        }
+        
+        .cell {
+            background: #3a3a3a;
+            border: none;
+            border-radius: 8px;
+            font-size: 48px;
+            font-weight: bold;
+            color: white;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+        }
+        
+        .cell:hover {
+            background: #4a4a4a;
+        }
+        
+        .cell.x {
+            color: #ef4444;
+        }
+        
+        .cell.o {
+            color: #3b82f6;
+        }
+        
+        .cell.winning {
+            animation: winningCell 0.6s ease-in-out;
+        }
+        
+        @keyframes winningCell {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+        
+        .game-info {
+            margin: 20px 0;
+        }
+        
+        .current-player {
+            font-size: 18px;
+            margin-bottom: 10px;
+        }
+        
+        .reset-btn {
+            background: #ef4444;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .reset-btn:hover {
+            background: #dc2626;
+        }
+        
+        /* Blur overlay */
+        .blur-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            display: none;
+            z-index: 1000;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        /* Winner popup */
+        .winner-popup {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #2a2a2a;
+            border-radius: 16px;
+            padding: 40px;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            z-index: 1001;
+            animation: slideIn 0.4s ease-out;
+            min-width: 300px;
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translate(-50%, -50%) scale(0.8);
+            }
+            to {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1);
+            }
+        }
+        
+        .winner-popup h2 {
+            margin: 0 0 20px 0;
+            font-size: 28px;
+            color: #10b981;
+        }
+        
+        .winner-name {
+            font-size: 36px;
+            font-weight: bold;
+            margin: 20px 0;
+            text-transform: uppercase;
+        }
+        
+        .winner-name.x {
+            color: #ef4444;
+        }
+        
+        .winner-name.o {
+            color: #3b82f6;
+        }
+        
+        .close-btn {
+            background: #10b981;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            margin-top: 20px;
+            transition: background 0.2s;
+        }
+        
+        .close-btn:hover {
+            background: #059669;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>Tic Tac Toe</h1>
+        
+        <div class="game-info">
+            <div class="current-player" id="currentPlayer">Current Player: X</div>
+        </div>
+        
+        <div class="grid" id="grid">
+            <button class="cell" data-index="0"></button>
+            <button class="cell" data-index="1"></button>
+            <button class="cell" data-index="2"></button>
+            <button class="cell" data-index="3"></button>
+            <button class="cell" data-index="4"></button>
+            <button class="cell" data-index="5"></button>
+            <button class="cell" data-index="6"></button>
+            <button class="cell" data-index="7"></button>
+            <button class="cell" data-index="8"></button>
+        </div>
+        
+        <button class="reset-btn" onclick="resetGame()">New Game</button>
+    </div>
+
+    <!-- Blur overlay -->
+    <div class="blur-overlay" id="blurOverlay"></div>
+    
+    <!-- Winner popup -->
+    <div class="winner-popup" id="winnerPopup">
+        <h2>🎉 Winner! 🎉</h2>
+        <div class="winner-name" id="winnerName"></div>
+        <button class="close-btn" onclick="closeWinnerPopup()">Close</button>
+    </div>
+
+    <script>
+        const grid = document.getElementById('grid');
+        const currentPlayerDisplay = document.getElementById('currentPlayer');
+        const blurOverlay = document.getElementById('blurOverlay');
+        const winnerPopup = document.getElementById('winnerPopup');
+        const winnerName = document.getElementById('winnerName');
+        const cells = [...grid.children];
+        
+        let currentPlayer = 'X';
+        let gameBoard = ['', '', '', '', '', '', '', '', ''];
+        let gameActive = true;
+        
+        // Winning combinations
+        const winningCombos = [
+            [0, 1, 2], [3, 4, 5], [6, 7, 8], // Horizontal
+            [0, 3, 6], [1, 4, 7], [2, 5, 8], // Vertical
+            [0, 4, 8], [2, 4, 6] // Diagonal
+        ];
+        
+        // Add click event to each cell
+        cells.forEach(cell => {
+            cell.addEventListener('click', () => {
+                const index = parseInt(cell.dataset.index);
+                if (gameBoard[index] === '' && gameActive) {
+                    makeMove(index);
+                }
+            });
+        });
+        
+        function makeMove(index) {
+            gameBoard[index] = currentPlayer;
+            cells[index].textContent = currentPlayer;
+            cells[index].classList.add(currentPlayer.toLowerCase());
+            
+            // Check for win
+            if (checkWin()) {
+                showWinnerPopup();
+                return;
+            }
+            
+            // Check for draw
+            if (checkDraw()) {
+                showDrawPopup();
+                return;
+            }
+            
+            // Switch player
+            currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+            currentPlayerDisplay.textContent = `Current Player: ${currentPlayer}`;
+        }
+        
+        function checkWin() {
+            return winningCombos.some(combo => {
+                const [a, b, c] = combo;
+                return gameBoard[a] && gameBoard[a] === gameBoard[b] && gameBoard[a] === gameBoard[c];
+            });
+        }
+        
+        function checkDraw() {
+            return gameBoard.every(cell => cell !== '');
+        }
+        
+        function showWinnerPopup() {
+            gameActive = false;
+            
+            // Highlight winning cells
+            const winningCombo = winningCombos.find(combo => {
+                const [a, b, c] = combo;
+                return gameBoard[a] && gameBoard[a] === gameBoard[b] && gameBoard[a] === gameBoard[c];
+            });
+            
+            if (winningCombo) {
+                winningCombo.forEach(index => {
+                    cells[index].classList.add('winning');
+                });
+            }
+            
+            // Show popup
+            winnerName.textContent = currentPlayer;
+            winnerName.className = `winner-name ${currentPlayer.toLowerCase()}`;
+            blurOverlay.style.display = 'block';
+            winnerPopup.style.display = 'block';
+        }
+        
+        function showDrawPopup() {
+            gameActive = false;
+            winnerName.textContent = "It's a Draw!";
+            winnerName.className = 'winner-name';
+            blurOverlay.style.display = 'block';
+            winnerPopup.style.display = 'block';
+        }
+        
+        function closeWinnerPopup() {
+            blurOverlay.style.display = 'none';
+            winnerPopup.style.display = 'none';
+        }
+        
+        function resetGame() {
+            gameBoard = ['', '', '', '', '', '', '', '', ''];
+            currentPlayer = 'X';
+            gameActive = true;
+            
+            cells.forEach(cell => {
+                cell.textContent = '';
+                cell.className = 'cell';
+            });
+            
+            currentPlayerDisplay.textContent = `Current Player: ${currentPlayer}`;
+            
+            // Hide popup if visible
+            blurOverlay.style.display = 'none';
+            winnerPopup.style.display = 'none';
+        }
+    </script>
+</body>
+</html>

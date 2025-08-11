@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Ticky Tacky</title>
+  <link rel="icon" href="data:;base64,iVBORw0KGgo=">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <aside class="card">
+      <div class="brand">
+        <div class="logo">TT</div>
+        <div>
+          <h1>TicTacPro — Multiplayer</h1>
+          <div class="muted">Real-time 1v1 with fallback to local & AI</div>
+        </div>
+      </div>
+
+      <div class="controls">
+        <label class="small">Your name</label>
+        <input id="nameInput" type="text" placeholder="e.g., DJ" value="Player">
+
+        <div class="row">
+          <button id="quickBtn" class="btn">Quick Play (Auto Match)</button>
+          <button id="createBtn" class="btn ghost">Create Room</button>
+        </div>
+
+        <div class="row">
+          <input id="roomInput" type="text" placeholder="Room ID (optional)">
+          <button id="joinBtn" class="btn ghost">Join</button>
+        </div>
+
+        <div class="row">
+          <button id="local2p" class="btn ghost">Play Local 2P</button>
+          <button id="vsai" class="btn ghost">Play vs AI</button>
+        </div>
+
+        <div class="scoreboard">
+          <div class="chip">X: <span id="scoreX">0</span></div>
+          <div class="chip">Draws: <span id="scoreD">0</span></div>
+          <div class="chip">O: <span id="scoreO">0</span></div>
+        </div>
+
+        <div class="small fade" style="margin-top:8px">Tip: Use number keys 1–9 (numpad mapping). Press R to restart local matches.</div>
+      </div>
+    </aside>
+
+    <main class="card game-wrap" style="position:relative">
+      <div class="status">
+        <div class="pill" id="turnPill"><strong id="turnText">Idle</strong></div>
+        <div class="meta">
+          <div class="small">Room: <span id="roomId" class="room-id">—</span></div>
+          <div class="small" id="connStatus">Server: <span class="fade">disconnected</span></div>
+        </div>
+      </div>
+
+      <div id="boardContainer" style="width:100%;max-width:560px;position:relative">
+        <div class="grid" id="grid" role="grid" aria-label="Game board"></div>
+        <div class="confetti" id="confetti"></div>
+      </div>
+
+      <div style="width:100%;display:flex;gap:8px;justify-content:center;align-items:center;margin-top:8px">
+        <button id="readyBtn" class="btn ghost" style="display:none">Ready</button>
+        <button id="rematchBtn" class="btn ghost">Rematch</button>
+        <button id="leaveBtn" class="btn ghost">Leave</button>
+      </div>
+
+      <div class="small fade" id="message" style="margin-top:8px">Status will appear here.</div>
+    </main>
+  </div>
+
+  <!-- Winner popup overlay -->
+  <div class="winner-overlay" id="winnerOverlay">
+    <div class="winner-popup">
+      <h2 id="popupTitle">🎉 Winner! 🎉</h2>
+      <div class="winner-name" id="winnerName"></div>
+      <button class="btn" onclick="closeWinnerPopup()">Close</button>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
