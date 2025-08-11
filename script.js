@@ -72,43 +72,43 @@ function render() {
       c.classList.add('disabled');
     }
   });
-  
+
   turnText.textContent = gameOver ? 'Match complete' : `Turn: ${currentTurn}`;
-  
+
   // Add winner glow to turn pill
   if (gameOver) {
     turnPill.classList.add('winner');
   } else {
     turnPill.classList.remove('winner');
   }
-  
+
   scoreXEl.textContent = scores.X;
   scoreOEl.textContent = scores.O;
   scoreDEl.textContent = scores.D;
 }
 
-function updateMessage(txt) { 
-  message.textContent = txt; 
+function updateMessage(txt) {
+  message.textContent = txt;
 }
 
 function showWinnerPopup(winner, combo, isDraw = false) {
   gameOver = true;
-  
+
   const popupTitle = document.getElementById('popupTitle');
-  
+
   if (!isDraw) {
     // Add winning class to winning cells
     combo.forEach(index => {
       const cell = gridEl.children[index];
       if (cell) cell.classList.add('winning');
     });
-    
+
     // Show winner popup
     popupTitle.textContent = '🎉 Winner! 🎉';
     winnerName.textContent = winner;
     winnerName.className = `winner-name ${winner.toLowerCase()}`;
     winnerOverlay.style.display = 'flex';
-    
+
     // Burst confetti for celebration
     burstConfetti();
   } else {
@@ -132,16 +132,16 @@ function checkWin(b) {
   return null;
 }
 
-function isDraw(b) { 
-  return b.every(Boolean) && !checkWin(b); 
+function isDraw(b) {
+  return b.every(Boolean) && !checkWin(b);
 }
 
 function playLocalMove(idx, symbol) {
   if (gameOver || board[idx]) return;
-  
+
   board[idx] = symbol;
   const win = checkWin(board);
-  
+
   if (win) {
     gameOver = true;
     updateMessage(`${win.player} wins (local)!`);
@@ -157,10 +157,10 @@ function playLocalMove(idx, symbol) {
     render();
     return;
   }
-  
+
   currentTurn = (currentTurn === 'X') ? 'O' : 'X';
   render();
-  
+
   if (localMode === 'ai' && !gameOver && currentTurn !== mySymbol) {
     // AI move
     setTimeout(() => {
@@ -180,10 +180,10 @@ function aiBestMove() {
 function minimax(newBoard, player, aiPlayer) {
   const avail = newBoard.reduce((a, c, i) => { if (!c) a.push(i); return a; }, []);
   const win = checkWin(newBoard);
-  
+
   if (win) return { score: (win.player === aiPlayer) ? 10 : -10 };
   if (avail.length === 0) return { score: 0 };
-  
+
   const moves = [];
   for (const i of avail) {
     const mv = { index: i };
@@ -194,7 +194,7 @@ function minimax(newBoard, player, aiPlayer) {
     newBoard[i] = null;
     moves.push(mv);
   }
-  
+
   let best;
   if (player === aiPlayer) {
     let bestScore = -Infinity;
@@ -203,14 +203,14 @@ function minimax(newBoard, player, aiPlayer) {
     let bestScore = Infinity;
     for (const m of moves) if (m.score < bestScore) { bestScore = m.score; best = m; }
   }
-  
+
   return best;
 }
 
 /* ============== UI events ============== */
 function onCellClick(e) {
   const idx = Number(e.currentTarget.dataset.index);
-  
+
   if (localMode === 'local2p' || localMode === 'ai') {
     // local hotseat or AI
     if (localMode === 'ai') {
@@ -224,12 +224,12 @@ function onCellClick(e) {
   }
 
   // multiplayer
-  if (!socket || socket.disconnected) { 
-    updateMessage('Not connected to server.'); 
-    return; 
+  if (!socket || socket.disconnected) {
+    updateMessage('Not connected to server.');
+    return;
   }
   if (gameOver) return;
-  
+
   socket.emit('playMove', { roomId, index: idx });
 }
 
@@ -263,14 +263,16 @@ function initSocket() {
     return;
   }
 
+  const SERVER_URL = "https://ticky-tacky.onrender.com";
   try {
     console.log('Creating new socket connection...');
+
     socket = io(SERVER_URL, {
       transports: ['websocket', 'polling'],
       timeout: 10000,
       forceNew: true
     });
-    
+
     connStatus.innerHTML = 'Server: <span style="color:#60a5fa">connecting...</span>';
 
     socket.on('connect', () => {
@@ -430,9 +432,9 @@ readyBtn.addEventListener('click', () => {
 });
 
 rematchBtn.addEventListener('click', () => {
-  if (localMode !== 'multiplayer' || !socket) { 
-    updateMessage('No multiplayer room — rematch local'); 
-    return; 
+  if (localMode !== 'multiplayer' || !socket) {
+    updateMessage('No multiplayer room — rematch local');
+    return;
   }
   socket.emit('rematch', { roomId });
   updateMessage('Rematch requested.');
@@ -493,7 +495,7 @@ window.addEventListener('keydown', (e) => {
 function burstConfetti() {
   confetti.innerHTML = '';
   const colors = ['#7c3aed', '#06b6d4', '#60a5fa', '#fb923c', '#10b981', '#f43f5e'];
-  
+
   for (let i = 0; i < 24; i++) {
     const d = document.createElement('div');
     d.className = 'dot';
@@ -505,7 +507,7 @@ function burstConfetti() {
     d.style.opacity = 1;
     confetti.appendChild(d);
   }
-  
+
   setTimeout(() => confetti.innerHTML = '', 1200);
 }
 
