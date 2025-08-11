@@ -277,8 +277,11 @@ function initSocket() {
 
     socket.on("connect", () => {
       console.log("Connected to server");
-      setInterval(() => socket.emit("pingServer"), 25000); // send ping every 25s
+      connStatus.innerHTML = 'Server: <span style="color:#22c55e">connected</span>';
+      updateMessage('Server connected.');
+      setInterval(() => socket.emit("pingServer"), 25000); // keep alive ping
     });
+
 
     socket.on('disconnect', () => {
       connStatus.innerHTML = 'Server: <span style="color:#ef4444">disconnected</span>';
