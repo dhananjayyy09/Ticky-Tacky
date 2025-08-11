@@ -7,7 +7,9 @@ Client script for TicTacPro Multiplayer
 - Update SERVER_URL if needed
 */
 
-const SERVER_URL = location.origin.includes('file:') ? 'http://localhost:3000' : location.origin;
+const SERVER_URL = location.hostname === 'localhost'
+  ? 'http://localhost:10000'  // local backend with port
+  : 'https://ticky-tacky.onrender.com';  // deployed backend URL without port
 
 /* ============== UI elements ============== */
 const gridEl = document.getElementById('grid');
@@ -263,17 +265,14 @@ function initSocket() {
     return;
   }
 
-  const SERVER_URL = "https://ticky-tacky.onrender.com/";
+  SERVER_URL = SERVER_URL || 'https://ticky-tacky.onrender.com'; // ensure SERVER_URL is set
   try {
     console.log('Creating new socket connection...');
 
-    socket = io(SERVER_URL, {
-      transports: ["websocket"],
-      reconnection: true,
-      reconnectionAttempts: 5,
-      timeout: 10000
+    const socket = io(SERVER_URL, {
+      transports: ['websocket'], // force websocket transport (optional but recommended)
+      withCredentials: true
     });
-
 
     connStatus.innerHTML = 'Server: <span style="color:#60a5fa">connecting...</span>';
 
