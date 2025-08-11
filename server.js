@@ -29,15 +29,11 @@ app.get('/script.js', (req, res) => {
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: [
-      "https://ticky-tacky.onrender.com",  // NO double https://, NO trailing slash
-      "http://localhost:3000" // keep for local dev
-    ],
+    origin: '*',
     methods: ["GET", "POST"],
     credentials: true
   }
 });
-
 
 const PORT = process.env.PORT || 10000; // fallback for local dev
 
